@@ -15,12 +15,12 @@ add_action('plugins_loaded', 'woocommerce_payumbolt_init', 0);
 
 function woocommerce_payumbolt_init() {
 
-  if ( !class_exists( 'WC_Payment_Gateway' ) ) return;  
+  if ( !class_exists( 'WC_Payment_Gateway' ) ) return;
   /**
    * Localisation
    */
   load_plugin_textdomain('wc-payumbolt', false, dirname( plugin_basename( __FILE__ ) ) . '/languages');
-  
+
   if($_GET['msg']!=''){
     add_action('the_content', 'showpayumboltMessage');
   }
@@ -33,9 +33,9 @@ function woocommerce_payumbolt_init() {
    */
   class WC_Payumbolt extends WC_Payment_Gateway {
     protected $msg = array();
-	
+
 	protected $logger;
-	
+
     public function __construct(){
 		global $wpdb;
       // Go wild in here
@@ -55,47 +55,47 @@ function woocommerce_payumbolt_init() {
 	  $this -> pum_url	= $this -> settings['pum_url'];
 	  $this -> msg['message'] = "";
       $this -> msg['class'] = "";
-	
-		
+
+
       add_action('init', array(&$this, 'check_payumbolt_response'));
       //update for woocommerce >2.0
       add_action( 'woocommerce_api_' . strtolower( get_class( $this ) ), array( $this, 'check_payumbolt_response' ) );
 
       add_action('valid-payumbolt-request', array(&$this, 'SUCCESS'));
-			
+
       if ( version_compare( WOOCOMMERCE_VERSION, '2.0.0', '>=' ) ) {
         add_action( 'woocommerce_update_options_payment_gateways_' . $this->id, array( &$this, 'process_admin_options' ) );
       } else {
         add_action( 'woocommerce_update_options_payment_gateways', array( &$this, 'process_admin_options' ) );
       }
-		
+
       add_action('woocommerce_receipt_payumbolt', array(&$this, 'receipt_page'));
       add_action('woocommerce_thankyou_payumbolt',array(&$this, 'thankyou_page'));
-      
+
 	  $this->logger = wc_get_logger();
-	  
-	  
+
+
 	  add_action('wp_head', array(&$this,'header_modifier'));
-	  
+
     }
-    
+
 	function header_modifier(){
       if($this->gateway_module == 'sandbox')
 	  {
 		  ?>
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" >
           <script id="bolt" src="https://sboxcheckout-static.citruspay.com/bolt/run/bolt.min.js" bolt-
-color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/Bolt-Logo-e14421724859591.png"></script>
+color="e34524" bolt-logo=""></script>
           <?php
 	  }
 	  else { ?>
 	      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" >
-          <script id="bolt" src="https://checkout-static.citruspay.com/bolt/run/bolt.min.js" bolt-color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/Bolt-Logo-e14421724859591.png"></script>
+          <script id="bolt" src="https://checkout-static.citruspay.com/bolt/run/bolt.min.js" bolt-color="e34524" bolt-logo=""></script>
       <?php
 	  }
     }
-	
-	
+
+
     function init_form_fields(){
 
       $this -> form_fields = array(
@@ -138,7 +138,7 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
             )
           );
     }
-    
+
     /**
      * Admin Panel Options
      * - Options for bits like 'title' and availability on a country-by-country basis
@@ -150,16 +150,16 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
       echo '<table class="form-table">';
       $this -> generate_settings_html();
       echo '</table>';
-	  
+
     }
-		
+
     /**
      *  There are no payment fields for Citrus, but we want to show the description if set.
      **/
     function payment_fields(){
       if($this -> description) echo wpautop(wptexturize($this -> description));
     }
-		
+
     /**
      * Receipt Page
      **/
@@ -167,10 +167,10 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
       echo '<p>'.__('Thank you for your order, please click the button below to pay.', 'payumbolt').'</p>';
       echo $this -> generate_payumbolt_form($order);
     }
-    
+
     /**
      * Process the payment and return the result
-     **/   
+     **/
      function process_payment($order_id){
             $order = new WC_Order($order_id);
 
@@ -191,35 +191,35 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
         }
     /**
      * Check for valid Citrus server callback
-     **/    
+     **/
     function check_payumbolt_response(){
-      
+
 		global $woocommerce;
-		
-		
-		
+
+
+
 		if (!isset($_GET['pg'])) {
-			//invalid response	
+			//invalid response
 			$this -> msg['class'] = 'error';
 			$this -> msg['message'] = "Invalid payment gateway response...";
-			
+
 			wc_add_notice( $this->msg['message'], $this->msg['class'] );
-			
+
 			$redirect_url = add_query_arg( array('msg'=> urlencode($this -> msg['message']), 'type'=>$this -> msg['class']), $redirect_url );
 
 			wp_redirect( $redirect_url );
 			exit;
 		}
-		
+
 		if($_GET['pg'] == 'PayUmoney') {
-			
-			$postdata = $_POST;			
-			
+
+			$postdata = $_POST;
+
 			if (isset($postdata ['key']) && ($postdata['key'] == $this -> pum_key)) {
 				$txnid = $postdata['txnid'];
     	    	$order_id = explode('_', $txnid);
 				$order_id = (int)$order_id[0];    //get rid of time part
-				
+
 				$amount      		= 	$postdata['amount'];
 				$productInfo  		= 	$postdata['productinfo'];
 				$firstname    		= 	$postdata['firstname'];
@@ -229,32 +229,32 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 				$keyArray 	  		= 	explode("|",$keyString);
 				$reverseKeyArray 	= 	array_reverse($keyArray);
 				$reverseKeyString	=	implode("|",$reverseKeyArray);
-				
+
 				$order = new WC_Order($order_id);
 
-				
+
 				if (isset($postdata['status']) && $postdata['status'] == 'success') {
 				 	$saltString     = $this -> pum_salt.'|'.$postdata['status'].'|'.$reverseKeyString;
 					$sentHashString = strtolower(hash('sha512', $saltString));
 				 	$responseHashString=$postdata['hash'];
-				
+
 					$this -> msg['class'] = 'error';
 					$this -> msg['message'] = "Thank you for shopping with us. However, the transaction has been declined.";
-					
-					if($sentHashString==$responseHashString){											
-						
-						$this -> msg['message'] = "Thank you for shopping with us. Your account has been charged and your transaction is successful with following order details: 
-								
-							<br> 
+
+					if($sentHashString==$responseHashString){
+
+						$this -> msg['message'] = "Thank you for shopping with us. Your account has been charged and your transaction is successful with following order details:
+
+							<br>
 								Order Id: $order_id <br/>
-								Amount: $amount 
+								Amount: $amount
 								<br />
-								
-									
+
+
 						We will be shipping your order to you soon.";
-						
+
 						$this -> msg['class'] = 'success';
-								
+
 						if($order -> status == 'processing' || $order -> status == 'completed' )
 						{
 							//do nothing
@@ -268,7 +268,7 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 							$order -> add_order_note("Paid by PayUmoney");
 							$woocommerce -> cart -> empty_cart();
 						}
-						
+
 						//send to shiprocket
 						$this->SubmitToWebhook($order,$txnid,$this->pum_url);
 					}
@@ -278,17 +278,17 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 						$this->msg['message'] = "Thank you for shopping with us. However, the payment failed";
 						$order -> update_status('failed');
 						$order -> add_order_note('Failed');
-						$order -> add_order_note($this->msg['message']);						
+						$order -> add_order_note($this->msg['message']);
 					}
 				} else {
 		    		$this -> msg['class'] = 'error';
 					$this -> msg['message'] = "Thank you for shopping with us. However, the transaction has been declined.";
 							//Here you need to put in the routines for a failed
 							//transaction such as sending an email to customer
-							//setting database status etc etc			
-				} 
+							//setting database status etc etc
+				}
 			}
-		
+
 		}
 			//manage msessages
 		if (function_exists('wc_add_notice')) {
@@ -303,44 +303,44 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 			}
 			$woocommerce->set_messages();
 		}
-			
+
 		$redirect_url = ($this -> redirect_page_id=="" || $this -> redirect_page_id==0)?get_site_url() . "/":get_permalink($this -> redirect_page_id);
 		//For wooCoomerce 2.0
 		//$redirect_url = add_query_arg( array('msg'=> urlencode($this -> msg['message']), 'type'=>$this -> msg['class']), $redirect_url );
 		wp_redirect( $redirect_url );
 		exit;
-			
+
     }
-    
-    
-    
+
+
+
     /*
      //Removed For WooCommerce 2.0
     function showMessage($content){
          return '<div class="box '.$this -> msg['class'].'-box">'.$this -> msg['message'].'</div>'.$content;
      }*/
-    
+
     /**
      * Generate Citrus button link
-     **/    
+     **/
     public function generate_payumbolt_form($order_id){
-      
+
 		global $woocommerce;
 		$order = new WC_Order($order_id);
 		$redirect_url = ($this -> redirect_page_id=="" || $this -> redirect_page_id==0)?get_site_url() . "/":get_permalink($this -> redirect_page_id);
-      
+
 		//For wooCoomerce 2.0
 		$redirect_url = add_query_arg( 'wc-api', get_class( $this ), $redirect_url );
 		$redirect_url = add_query_arg( 'pg',$this -> title, $redirect_url );  //pass gateway selection in response
 		$order_id = $order_id.'_'.date("ymds");
-      
+
 		//do we have a phone number?
-		//get currency      
+		//get currency
 		$address = $order -> billing_address_1;
 		if ($order -> billing_address_2 != "")
 		$address = $address.' '.$order -> billing_address_2;
-      
-		$productInfo = "";	  
+
+		$productInfo = "";
 	  	$order_items = $order->get_items();
 		foreach($order_items as $item_id => $item_data)
 		{
@@ -348,31 +348,31 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 			$productInfo .= $product->get_sku();
 		}
 		if($productInfo == "" || $productInfo == 0)	$productInfo = "Product Info";
-			
-			$amount = $order -> order_total;			
+
+			$amount = $order -> order_total;
 			$firstname = $order -> billing_first_name;
 			$lastname = $order -> billing_last_name;
 			$zipcode = $order -> billing_postcode;
 			$email = $order -> billing_email;
-			$phone = $order -> billing_phone;			
+			$phone = $order -> billing_phone;
         	$state = $order -> billing_state;
         	$city = $order -> billing_city;
         	$country = $order -> billing_country;
 			$udf5 = "WooCommerce_v_3.x_BOLT";
-			
-			$hash=hash('sha512', $this -> pum_key.'|'.$order_id.'|'.$amount.'|'.$productInfo.'|'.$firstname.'|'.$email.'|||||'.$udf5.'||||||'.$this -> pum_salt); 
-			
+
+			$hash=hash('sha512', $this -> pum_key.'|'.$order_id.'|'.$amount.'|'.$productInfo.'|'.$firstname.'|'.$email.'|||||'.$udf5.'||||||'.$this -> pum_salt);
+
 			$html = "<form name=\"payumbolt-form\" id=\"payumbolt-form\" method=\"POST\">
 			<button id='submit_payumbolt_payment_form' onclick='launchBOLT(); return false;'>Pay Now</button>
 			<a id='cancel_payumbolt_payment' class=\"button cancel\" href=\"". $order->get_cancel_order_url()."\">".__('Cancel Payment &amp; back to cart')."</a>
 			</form>
-			
+
 					<script>
 						function launchBOLT()
 						{
 						bolt.launch({
 						key: '".$this -> pum_key."',
-						txnid: '".$order_id."', 
+						txnid: '".$order_id."',
 						hash: '".$hash."',
 						amount: '".$amount."',
 						firstname: '".$firstname."',
@@ -383,7 +383,7 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 						surl : '".$redirect_url."',
 						furl: '".$redirect_url."'
 						},{ responseHandler: function(BOLT){
-								console.log( BOLT.response.txnStatus );		
+								console.log( BOLT.response.txnStatus );
 								if(BOLT.response.txnStatus != 'CANCEL')
 								{
 								var fr = '<form action=\"". $redirect_url."\" method=\"post\">' +
@@ -398,7 +398,7 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 								'<input type=\"hidden\" name=\"hash\" value=\"'+BOLT.response.hash+'\" />' +
   								'</form>';
 								var form = jQuery(fr);
-								jQuery('body').append(form);								
+								jQuery('body').append(form);
 								form.submit();
 								}
 							},
@@ -407,16 +407,16 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 							}
 						});
 						}
-						
+
 						launchBOLT();
-					</script>					
+					</script>
 					";
-					
-			return $html;	
-		
+
+			return $html;
+
     }
-    
-        
+
+
     function get_pages($title = false, $indent = true) {
       $wp_pages = get_pages('sort_column=menu_order');
       $page_list = array();
@@ -443,11 +443,11 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 	**/
 	public function _sendWebhook($url, $body)
     {
-		
+
 		$bodyJson = json_encode($body);
         try {
         	$headers = array('Content-Type: application/json','Content-Length: ' . strlen($bodyJson));
-	       
+
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_URL, $url);
 			curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -468,29 +468,29 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 			$this->logger->debug("Error :: ".$e->getMessage().". Failed to post data to " . $url, array( 'source' => 'payumbolt' ) );
 		}
     }
-	
+
 	public function _getWebhookData($order,$txnid)
     {
 		$order_data = $order->get_data();
 		$order_meta = get_post_meta($order->id);
 		$order_items = $order->get_items();
 		$weight=0;
-		
+
 		$line_items=array();
 		foreach($order_items as $item_id => $item_data)
 		{
 			$product = wc_get_product( $item_data['product_id'] );
 			$weight += $product->get_weight();
-			
+
 			$line_items[]= array ("id" => $item_id,
 							   "quantity" => $order->get_item_meta($item_id, '_qty', true),
 							   "price" => $product->get_sale_price(),
 							   "grams" => $product->get_weight(),
 							   "sku" => $product->get_sku(),
 							   "product_id" => $product->get_id(),
-							   "name" => $product->get_name());	
+							   "name" => $product->get_name());
 		}
-		
+
 		$ordata = array(
 						"checkout_id" => $txnid,
 						"email" => $order -> billing_email,
@@ -503,23 +503,23 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 						"total_discounts" => $order_data['discount_total'],
 						"line_items" => $line_items
 						);
-											   
+
 		//$this->logger->debug( 'Data: '.json_encode($ordata), array( 'source' => 'payumbolt' ));
 		return $ordata;
     }
-	
+
 	public function SubmitToWebhook($order,$txnid,$url)
     {
 		if($url == '') return;
-		
+
 		try {
 			$data = $this->_getWebhookData($order,$txnid);
-			
+
 			//$url = 'https://www.payumoney.com/auth/op/receiveCartDetailsForCod/93CD737798EEB6398837ABC76E718C83';
-			
+
 			//$url = 'http://viatechs.in/request.php';
-			
-	        $this->_sendWebhook($url, $data);	        
+
+	        $this->_sendWebhook($url, $data);
 		}
 		catch (Exception $e)
 		{
@@ -531,8 +531,8 @@ color="e34524" bolt-logo="http://boltiswatching.com/wp-content/uploads/2015/09/B
 	**/
 
   }
-	 	
-	
+
+
 
   /**
    * Add the Gateway to WooCommerce
